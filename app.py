@@ -265,105 +265,180 @@ if df is None:
 
 # Visão geral
 
+# Cria duas colunas na interface do Streamlit, com proporções de largura 2 para 1 e um espaçamento "large"
 colA, colB = st.columns([2, 1], gap="large")
 
+# Inicia um bloco de código que será renderizado na primeira coluna (colA)
 with colA:
+    # Adiciona um subtítulo à coluna
     st.subheader("Prévia do dataset")
+    # Exibe uma prévia das primeiras 50 linhas do DataFrame 'df' em um widget de tabela, usando a largura total do contêiner
     st.dataframe(df.head(50), use_container_width=True)
 
+# Inicia um bloco de código que será renderizado na segunda coluna (colB)
 with colB:
+    # Adiciona um subtítulo à coluna
     st.subheader("📊 Resumo")
+    # Exibe o número de linhas do DataFrame
     st.write(f"**Linhas:** {df.shape[0]}")
+    # Exibe o número de colunas do DataFrame
     st.write(f"**Colunas:** {df.shape[1]}")
+    # Exibe o número de linhas duplicadas no DataFrame (convertido para inteiro)
     st.write(f"**Duplicadas (linhas):** {int(df.duplicated().sum())}")
+    # Exibe o número total de células nulas em todo o DataFrame (convertido para inteiro)
     st.write(f"**Células nulas (total):** {int(df.isna().sum().sum())}")
+    # Adiciona uma linha vazia para espaçamento visual
     st.write("")
+    # Adiciona uma legenda para a tabela de resumo por coluna
     st.caption("Detalhe por coluna:")
+    # Exibe um DataFrame com um resumo detalhado por coluna (criado pela função df_info_summary)
+    # usando a largura total do contêiner e com altura fixa de 260 pixels
     st.dataframe(df_info_summary(df), use_container_width=True, height=260)
 
+# Adiciona um divisor visual horizontal na interface do Streamlit
 st.divider()
 
-# ---------------------------
 # Etapas (Acordeões)
-# ---------------------------
 
 # 1) Padronizar nomes de colunas
 with st.expander("1) 🏷️ Padronizar nomes de colunas", expanded=False):
+    # Exibe uma mensagem de sugestão para o usuário sobre como padronizar nomes de colunas
     st.write("Sugestão: remover espaços, padronizar para minúsculas e trocar espaços por `_`.")
+    # Cria um DataFrame temporário para pré-visualizar a mudança dos nomes das colunas
     preview_cols = pd.DataFrame({
+        # Coluna "antes" mostra os nomes atuais das colunas do DataFrame
         "antes": st.session_state.df.columns,
+        # Coluna "depois" mostra como os nomes ficariam após a normalização usando a função normalize_colname
         "depois": [normalize_colname(c) for c in st.session_state.df.columns]
     })
+    # Exibe o DataFrame de pré-visualização na interface do Streamlit, ocupando a largura total do contêiner
     st.dataframe(preview_cols, use_container_width=True)
-    
+
+    # Calcula o número de nomes de coluna que se tornariam duplicados após a normalização
     dups = pd.Series([normalize_colname(c) for c in df.columns]).duplicated().sum()
+    # Exibe o número de possíveis nomes duplicados que serão tratados pela função make_unique
     st.write(f"Possíveis nomes duplicados após padronizar: **{int(dups)}**")
 
+    # Cria um botão para aplicar a padronização dos nomes das colunas
     if st.button("Aplicar padronização de nomes", key="apply_colnames"):
+        # Armazena os nomes das colunas atuais em uma lista
         old_cols = list(df.columns)
+        # Gera uma nova lista de nomes de colunas padronizados usando a função normalize_colname
         new_cols = [normalize_colname(c) for c in old_cols]
+        # Garante que os novos nomes de colunas sejam únicos, adicionando sufixos se necessário (ex: "col_2")
         new_cols = make_unique(new_cols)
 
+        # Cria uma cópia do DataFrame para evitar modificar o DataFrame original diretamente em caso de re-execução
         df = df.copy()
+        # Atribui os novos nomes padronizados e únicos às colunas do DataFrame
         df.columns = new_cols
+        # Atualiza o DataFrame na sessão do Streamlit com as colunas renomeadas
         st.session_state.df = df
 
+        # Registra a ação no log de passos
         log_step("Nomes de colunas padronizados e tornados únicos.")
+        # Exibe uma mensagem de sucesso para o usuário
         st.success("Aplicado!")
+        # Força o Streamlit a reroduzir o script para atualizar a interface com os novos nomes de colunas
         st.rerun()
 
 
 # 2) Remover espaços extras em textos
 with st.expander("2) ✂️ Limpar textos (trim, espaços duplicados)", expanded=False):
+    # Filtra as colunas do DataFrame que possuem o tipo de dado 'object' (geralmente strings/textos)
     text_cols = [c for c in df.columns if df[c].dtype == "object"]
+    # Cria um multiselect no Streamlit para o usuário selecionar quais colunas de texto aplicar a limpeza
+    # Por padrão, pré-seleciona as primeiras 10 colunas de texto (ou todas se houver menos de 10)
     selected = st.multiselect("Selecione colunas de texto", options=text_cols, default=text_cols[:10])
+    # Cria uma caixa de seleção para permitir ao usuário decidir se deseja substituir múltiplos espaços por um único
     replace_multi_space = st.checkbox("Trocar múltiplos espaços por 1 espaço", value=True)
+    # Cria um botão para aplicar as operações de limpeza de texto
     if st.button("Aplicar limpeza de texto", key="apply_text"):
+        # Itera sobre cada coluna selecionada pelo usuário para aplicar a limpeza
         for c in selected:
+            # Converte a coluna para o tipo de string do pandas (permite valores nulos)
             s = df[c].astype("string")
+            # Remove espaços em branco do início e do fim de cada string na série
             s = s.str.strip()
+            # Verifica se a opção de substituir múltiplos espaços foi selecionada
             if replace_multi_space:
+                # Substitui um ou mais espaços consecutivos por um único espaço
                 s = s.str.replace(r"\s+", " ", regex=True)
+            # Atualiza a coluna original no DataFrame com a série de strings limpa
             df[c] = s
+        # Atualiza o DataFrame na sessão do Streamlit com as alterações
         st.session_state.df = df
+        # Registra a ação de limpeza de texto no log de passos
         log_step(f"Limpeza de texto aplicada em {len(selected)} colunas (strip + normalização de espaços).")
+        # Exibe uma mensagem de sucesso para o usuário
         st.success("Aplicado!")
 
 # 3) Tipagem automática (datas e números)
 with st.expander("3) 🔢 Tipagem automática (detectar datas e números)", expanded=False):
+    # Exibe uma mensagem informativa para o usuário sobre o propósito desta seção.
     st.write("Converte colunas `object` que parecem números/datas.")
+    # Cria uma caixa de seleção para permitir ao usuário decidir se tenta converter colunas para números.
+    # O valor padrão é True (marcado).
     convert_numbers = st.checkbox("Tentar converter números (ex: '1.234,56')", value=True)
+    # Cria uma caixa de seleção para permitir ao usuário decidir se tenta converter colunas para datas.
+    # O valor padrão é True (marcado).
     convert_dates = st.checkbox("Tentar converter datas", value=True)
 
+    # Cria um botão para aplicar as operações de tipagem automática.
     if st.button("Aplicar tipagem automática", key="apply_types"):
+        # Inicializa um contador para o número de colunas cujo tipo de dado foi alterado.
         changed = 0
 
-        # números
+        # Bloco de código para tentar converter colunas para números.
+        # Verifica se o usuário optou por converter números.
         if convert_numbers:
+            # Itera sobre cada coluna no DataFrame.
             for c in df.columns:
+                # Verifica se o tipo de dado da coluna atual é 'object' (geralmente strings).
                 if df[c].dtype == "object":
-                    # tenta converter e mede ganho
+                    # Tenta converter a coluna para um tipo numérico usando a função `coerce_numeric`.
                     converted = coerce_numeric(df[c])
-                    # critério: se converter >= 70% dos não-nulos vira numérico, aplica
+                    # Calcula o número de valores não nulos na coluna original.
                     non_null = df[c].notna().sum()
+                    # Verifica se há valores não nulos na coluna.
                     if non_null > 0:
+                        # Calcula a proporção de valores que foram convertidos com sucesso para numéricos (não nulos na série convertida)
+                        # em relação aos valores não nulos da série original.
                         ratio = converted.notna().sum() / non_null
+                        # Se a proporção for 70% ou mais (o que significa que a maioria dos valores é numérica),
+                        # aplica a conversão ao DataFrame.
                         if ratio >= 0.7:
+                            # Atualiza a coluna no DataFrame com a série numérica convertida.
                             df[c] = converted
+                            # Incrementa o contador de colunas alteradas.
                             changed += 1
 
-        # datas
+        # Bloco de código para tentar converter colunas para datas.
+        # Verifica se o usuário optou por converter datas.
         if convert_dates:
+            # Itera sobre cada coluna no DataFrame.
             for c in df.columns:
+                # Verifica se o tipo de dado da coluna atual é 'object' (geralmente strings que podem conter datas).
                 if df[c].dtype == "object":
+                    # Tenta inferir se a coluna contém datas utilizando a função `try_parse_datetime`.
+                    # Se `try_parse_datetime` retornar True, significa que a coluna provavelmente é de data.
+                    # Se a função try_parse_datetime retornar True (indicando que a coluna parece conter datas)
                     if try_parse_datetime(df[c]):
+                        # Tenta converter a coluna para o tipo datetime de forma segura, tratando erros
                         dt = to_datetime_safe(df[c])
+                        # Verifica se a proporção de valores não nulos após a conversão para datetime é >= 70% dos valores não nulos originais
                         if dt.notna().sum() >= 0.7 * df[c].notna().sum():
+                            # Atribui a série de datetime convertida de volta à coluna original no DataFrame
                             df[c] = dt
+                            # Incrementa o contador de colunas alteradas com sucesso
                             changed += 1
 
+
+        # Atualiza o DataFrame na sessão do Streamlit com as alterações de tipagem.
         st.session_state.df = df
+        # Registra a ação de tipagem automática no log, indicando quantas colunas foram alteradas.
         log_step(f"Tipagem automática aplicada. Colunas convertidas: {changed}.")
+        # Exibe uma mensagem de sucesso na interface do Streamlit, mostrando o número de colunas convertidas.
         st.success(f"Aplicado! Colunas convertidas: {changed}")
 
 # 4) Duplicadas
