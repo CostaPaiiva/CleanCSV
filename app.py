@@ -6,7 +6,7 @@ import re
 import chardet
 from dateutil import parser
 
-st.set_page_config(page_title="Limpeza de CSV - Passo a Passo", layout="wide")
+st.set_page_config(page_title="Limpeza de Dados CSV", layout="wide")
 
 # ---------------------------
 # Utilitários
@@ -50,15 +50,16 @@ def coerce_numeric(series: pd.Series) -> pd.Series:
     s = s.str.replace(",", ".", regex=False)  # decimal vírgula -> ponto
     return pd.to_numeric(s, errors="coerce")
 
-def download_button_csv(df: pd.DataFrame, filename="dados_tratados.csv"):
-    csv_bytes = df.to_csv(index=False).encode("utf-8")
+def download_button_csv(df: pd.DataFrame, filename="dados_tratados.csv", sep=";"):
+    csv_bytes = df.to_csv(index=False, sep=sep).encode("utf-8-sig")  # <- utf-8-sig pro Excel
     st.download_button(
-        "⬇️ Baixar CSV tratado",
+        "⬇️ Baixar CSV tratado (Excel)",
         data=csv_bytes,
         file_name=filename,
         mime="text/csv",
         use_container_width=True
     )
+
 
 def df_info_summary(df: pd.DataFrame) -> pd.DataFrame:
     return pd.DataFrame({
@@ -85,7 +86,7 @@ def log_step(msg: str):
 # ---------------------------
 # UI
 # ---------------------------
-st.title("🧼 Limpeza de Dados (CSV) - Passo a Passo")
+st.title("🧼 Limpeza de Dados (CSV)")
 st.caption("Upload → Diagnóstico → Limpeza em etapas → Download do CSV tratado")
 
 with st.sidebar:
@@ -152,7 +153,7 @@ if df is None:
 colA, colB = st.columns([2, 1], gap="large")
 
 with colA:
-    st.subheader("👀 Prévia do dataset")
+    st.subheader("Prévia do dataset")
     st.dataframe(df.head(50), use_container_width=True)
 
 with colB:
@@ -371,6 +372,7 @@ with left:
 with right:
     st.subheader("✅ Exportar")
     nome_saida = st.text_input("Nome do arquivo de saída", value="dados_tratados.csv")
-    download_button_csv(st.session_state.df, filename=nome_saida)
+    download_button_csv(st.session_state.df, filename=nome_saida, sep=";")
+
 
 st.caption("Dica: se quiser voltar ao início, use **Resetar tudo** na barra lateral.")
