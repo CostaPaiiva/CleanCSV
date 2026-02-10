@@ -14,11 +14,11 @@ GitHub: https://github.com/CostaPaiiva
 - Exportação do dataset tratado em **CSV compatível com Excel (PT-BR)**:
   - separador `;`
   - encoding `utf-8-sig` (UTF-8 com BOM)  
-  ✅ Isso garante que o Excel abra com **cada coluna no lugar certo** (A=age, B=sex, C=bmi…).
+   Isso garante que o Excel abra com **cada coluna no lugar certo** (A=age, B=sex, C=bmi…).
 
 ---
 
-## ✅ Funcionalidades (passo a passo)
+##  Funcionalidades (passo a passo)
 
 ### 1) Upload e leitura
 - Upload de CSV pela sidebar
@@ -62,7 +62,7 @@ GitHub: https://github.com/CostaPaiiva
 
 ---
 
-## 🧰 Tecnologias
+## Tecnologias
 - Python
 - Streamlit
 - Pandas / NumPy
@@ -71,7 +71,7 @@ GitHub: https://github.com/CostaPaiiva
 
 ---
 
-## 📦 Instalação
+## Instalação
 
 ### 1) Clone o repositório
 > Substitua `NOME_DO_REPO` pelo nome do seu repositório.
