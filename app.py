@@ -18,11 +18,28 @@ def detect_encoding(file_bytes: bytes) -> str:
     return enc
 
 def normalize_colname(name: str) -> str:
+    import re
     name = str(name).strip().lower()
     name = re.sub(r"\s+", "_", name)
     name = re.sub(r"[^\w_]", "", name)
     name = re.sub(r"_+", "_", name).strip("_")
+    if name == "":
+        name = "col"
     return name
+
+
+def make_unique(names):
+    """Garante nomes únicos: a, a_2, a_3..."""
+    seen = {}
+    out = []
+    for n in names:
+        if n not in seen:
+            seen[n] = 1
+            out.append(n)
+        else:
+            seen[n] += 1
+            out.append(f"{n}_{seen[n]}")
+    return out
 
 def try_parse_datetime(series: pd.Series, sample_size=200) -> bool:
     # tentativa rápida e segura: checa se % alto vira datetime ao tentar parsear amostra
@@ -180,13 +197,23 @@ with st.expander("1) 🏷️ Padronizar nomes de colunas", expanded=False):
         "depois": [normalize_colname(c) for c in st.session_state.df.columns]
     })
     st.dataframe(preview_cols, use_container_width=True)
+    
+    dups = pd.Series([normalize_colname(c) for c in df.columns]).duplicated().sum()
+    st.write(f"Possíveis nomes duplicados após padronizar: **{int(dups)}**")
 
     if st.button("Aplicar padronização de nomes", key="apply_colnames"):
-        new_cols = [normalize_colname(c) for c in df.columns]
+        old_cols = list(df.columns)
+        new_cols = [normalize_colname(c) for c in old_cols]
+        new_cols = make_unique(new_cols)
+
+        df = df.copy()
         df.columns = new_cols
         st.session_state.df = df
-        log_step("Nomes de colunas padronizados (lowercase, sem espaços e caracteres especiais).")
+
+        log_step("Nomes de colunas padronizados e tornados únicos.")
         st.success("Aplicado!")
+        st.rerun()
+
 
 # 2) Remover espaços extras em textos
 with st.expander("2) ✂️ Limpar textos (trim, espaços duplicados)", expanded=False):
