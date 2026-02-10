@@ -443,136 +443,241 @@ with st.expander("3) 🔢 Tipagem automática (detectar datas e números)", expa
 
 # 4) Duplicadas
 with st.expander("4) 🧩 Remover linhas duplicadas", expanded=False):
+    # Calcula o número de linhas duplicadas no DataFrame e armazena em 'dups'
     dups = int(df.duplicated().sum())
+    # Exibe na interface do Streamlit o número de duplicadas detectadas
     st.write(f"Duplicadas detectadas: **{dups}**")
+    # Cria um seletor no Streamlit para escolher qual ocorrência de duplicata manter (primeira ou última)
     keep = st.selectbox("Manter qual ocorrência?", options=["first", "last"], index=0)
+    # Cria um botão para remover duplicadas, que é desabilitado se não houver duplicatas (dups == 0)
     if st.button("Remover duplicadas", key="apply_dups", disabled=(dups == 0)):
+        # Armazena o número de linhas antes da remoção para calcular quantas foram removidas
         before = df.shape[0]
+        # Remove as linhas duplicadas do DataFrame, mantendo a ocorrência especificada pelo usuário
         df = df.drop_duplicates(keep=keep)
+        # Atualiza o DataFrame no estado da sessão do Streamlit com as duplicadas removidas
         st.session_state.df = df
+        # Registra a ação no log, informando quantas linhas foram removidas e qual estratégia foi usada
         log_step(f"Linhas duplicadas removidas (keep='{keep}'). {before - df.shape[0]} linhas removidas.")
+        # Exibe uma mensagem de sucesso na interface do Streamlit
         st.success("Aplicado!")
 
 # 5) Valores nulos
 with st.expander("5) 🕳️ Tratamento de valores nulos", expanded=False):
+    # Exibe uma mensagem introdutória para o usuário sobre o tratamento de nulos.
     st.write("Escolha uma estratégia por tipo de coluna.")
+    # Filtra as colunas do DataFrame que são de tipo numérico.
     num_cols = [c for c in df.columns if pd.api.types.is_numeric_dtype(df[c])]
+    # Filtra as colunas do DataFrame que são de tipo 'object' ou string (categóricas/textos).
     cat_cols = [c for c in df.columns if df[c].dtype == "object" or pd.api.types.is_string_dtype(df[c])]
+    # Filtra as colunas do DataFrame que são de tipo datetime.
     dt_cols  = [c for c in df.columns if pd.api.types.is_datetime64_any_dtype(df[c])]
 
+    # Exibe um markdown para categorizar as opções de colunas numéricas.
     st.markdown("**Numéricas:**")
+    # Cria um seletor para a estratégia de tratamento de nulos para colunas numéricas.
     num_strategy = st.selectbox("Estratégia (numéricas)", ["Não mexer", "Remover linhas com NA", "Preencher com 0", "Preencher com média", "Preencher com mediana"], index=0)
+    # Cria um multiselect para o usuário escolher quais colunas numéricas aplicar a estratégia.
     num_sel = st.multiselect("Colunas numéricas", options=num_cols, default=num_cols)
 
+    # Exibe um markdown para categorizar as opções de colunas categóricas/textos.
     st.markdown("**Categóricas/Textos:**")
+    # Cria um seletor para a estratégia de tratamento de nulos para colunas categóricas.
     cat_strategy = st.selectbox("Estratégia (categóricas)", ["Não mexer", "Remover linhas com NA", "Preencher com 'DESCONHECIDO'", "Preencher com moda (mais frequente)"], index=0)
+    # Cria um multiselect para o usuário escolher quais colunas categóricas aplicar a estratégia.
     cat_sel = st.multiselect("Colunas categóricas", options=cat_cols, default=cat_cols)
 
+    # Exibe um markdown para categorizar as opções de colunas de datas.
     st.markdown("**Datas:**")
+    # Cria um seletor para a estratégia de tratamento de nulos para colunas de datas.
     dt_strategy = st.selectbox("Estratégia (datas)", ["Não mexer", "Remover linhas com NA", "Preencher com data mínima", "Preencher com data máxima"], index=0)
+    # Cria um multiselect para o usuário escolher quais colunas de data aplicar a estratégia.
     dt_sel = st.multiselect("Colunas datetime", options=dt_cols, default=dt_cols)
 
+    # Cria um botão para aplicar o tratamento de nulos selecionado.
     if st.button("Aplicar tratamento de nulos", key="apply_na"):
+        # Armazena o número de linhas antes do tratamento para calcular as removidas.
         before = df.shape[0]
 
-        # numéricas
+        # Inicia o tratamento para colunas numéricas.
+        # Verifica se uma estratégia foi selecionada e se há colunas numéricas escolhidas.
         if num_strategy != "Não mexer" and len(num_sel) > 0:
+            # Se a estratégia for remover linhas com NA.
             if num_strategy == "Remover linhas com NA":
+                # Remove linhas onde as colunas numéricas selecionadas têm valores nulos.
                 df = df.dropna(subset=num_sel)
+            # Se a estratégia for preencher valores nulos.
             else:
+                # Itera sobre cada coluna numérica selecionada.
                 for c in num_sel:
+                    # Se a estratégia for preencher com 0.
                     if num_strategy == "Preencher com 0":
+                        # Preenche os valores nulos da coluna com 0.
                         df[c] = df[c].fillna(0)
+                    # Se a estratégia for preencher com a média.
                     elif num_strategy == "Preencher com média":
+                        # Preenche os valores nulos da coluna com a média.
                         df[c] = df[c].fillna(df[c].mean())
+                    # Se a estratégia for preencher com a mediana.
                     elif num_strategy == "Preencher com mediana":
+                        # Preenche os valores nulos da coluna com a mediana.
                         df[c] = df[c].fillna(df[c].median())
 
-        # categóricas
+        # Inicia o tratamento para colunas categóricas.
+        # Verifica se uma estratégia foi selecionada e se há colunas categóricas escolhidas.
         if cat_strategy != "Não mexer" and len(cat_sel) > 0:
+            # Se a estratégia for remover linhas com NA.
             if cat_strategy == "Remover linhas com NA":
+                # Remove linhas onde as colunas categóricas selecionadas têm valores nulos.
                 df = df.dropna(subset=cat_sel)
+            # Se a estratégia for preencher valores nulos.
             else:
+                # Itera sobre cada coluna categórica selecionada.
                 for c in cat_sel:
+                    # Se a estratégia for preencher com 'DESCONHECIDO'.
                     if cat_strategy == "Preencher com 'DESCONHECIDO'":
+                        # Preenche os valores nulos da coluna com a string "DESCONHECIDO".
                         df[c] = df[c].fillna("DESCONHECIDO")
+                    # Se a estratégia for preencher com a moda (valor mais frequente).
                     elif cat_strategy == "Preencher com moda (mais frequente)":
+                        # Calcula a moda da coluna, ignorando nulos.
                         moda = df[c].mode(dropna=True)
+                        # Define o valor de preenchimento como a primeira moda ou "DESCONHECIDO" se não houver moda.
                         fill = moda.iloc[0] if len(moda) else "DESCONHECIDO"
+                        # Preenche os valores nulos da coluna com o valor de preenchimento.
                         df[c] = df[c].fillna(fill)
 
-        # datas
+        # Inicia o tratamento para colunas de datas.
+        # Verifica se uma estratégia foi selecionada e se há colunas de datas escolhidas.
         if dt_strategy != "Não mexer" and len(dt_sel) > 0:
+            # Se a estratégia for remover linhas com NA.
             if dt_strategy == "Remover linhas com NA":
+                # Remove linhas onde as colunas de data selecionadas têm valores nulos.
                 df = df.dropna(subset=dt_sel)
+            # Se a estratégia for preencher valores nulos.
             else:
+                # Itera sobre cada coluna de data selecionada.
                 for c in dt_sel:
+                    # Se a estratégia for preencher com a data mínima.
                     if dt_strategy == "Preencher com data mínima":
+                        # Verifica se há valores não nulos na coluna para calcular a data mínima.
                         if df[c].dropna().empty:
+                            # Se a coluna estiver vazia após remover nulos, pula para a próxima.
                             continue
+                        # Preenche os valores nulos da coluna com a data mínima.
                         df[c] = df[c].fillna(df[c].min())
+                    # Se a estratégia for preencher com a data máxima.
                     elif dt_strategy == "Preencher com data máxima":
+                        # Verifica se há valores não nulos na coluna para calcular a data máxima.
                         if df[c].dropna().empty:
+                            # Se a coluna estiver vazia após remover nulos, pula para a próxima.
                             continue
+                        # Preenche os valores nulos da coluna com a data máxima.
                         df[c] = df[c].fillna(df[c].max())
 
+        # Atualiza o DataFrame na sessão do Streamlit com as alterações.
         st.session_state.df = df
+        # Calcula o número de linhas removidas.
         removed = before - df.shape[0]
+        # Registra a ação no log, informando o número de linhas removidas.
         log_step(f"Tratamento de nulos aplicado. Linhas removidas: {removed}.")
+        # Exibe uma mensagem de sucesso na interface do Streamlit.
         st.success(f"Aplicado! Linhas removidas: {removed}")
 
 # 6) Outliers (opcional)
 with st.expander("6) 📉 Outliers (IQR) - opcional", expanded=False):
+    # Exibe uma mensagem informativa para o usuário sobre a funcionalidade de remoção de outliers.
     st.write("Remove linhas com outliers em colunas numéricas usando IQR (Q1-1.5*IQR, Q3+1.5*IQR).")
+    # Filtra as colunas do DataFrame que são de tipo numérico.
     num_cols = [c for c in df.columns if pd.api.types.is_numeric_dtype(df[c])]
+    # Cria um multiselect para o usuário escolher quais colunas numéricas avaliar para outliers.
     cols_out = st.multiselect("Colunas para avaliar outliers", options=num_cols, default=[])
+    # Cria um slider para o usuário ajustar o fator IQR (multiplicador para o intervalo interquartil).
     iqr_factor = st.slider("Fator IQR", min_value=1.0, max_value=3.0, value=1.5, step=0.1)
 
+    # Cria um botão para aplicar a remoção de outliers, desabilitado se nenhuma coluna for selecionada.
     if st.button("Remover outliers", key="apply_outliers", disabled=(len(cols_out) == 0)):
+        # Armazena o número de linhas antes da remoção para calcular quantas foram removidas.
         before = df.shape[0]
+        # Inicializa uma máscara booleana com True para todas as linhas.
         mask = pd.Series(True, index=df.index)
+        # Itera sobre cada coluna selecionada para avaliação de outliers.
         for c in cols_out:
+            # Seleciona a série (coluna) atual do DataFrame.
             s = df[c]
+            # Calcula o primeiro quartil (Q1).
             q1 = s.quantile(0.25)
+            # Calcula o terceiro quartil (Q3).
             q3 = s.quantile(0.75)
+            # Calcula o intervalo interquartil (IQR).
             iqr = q3 - q1
+            # Calcula o limite inferior para detecção de outliers.
             low = q1 - iqr_factor * iqr
+            # Calcula o limite superior para detecção de outliers.
             high = q3 + iqr_factor * iqr
+            # Atualiza a máscara para incluir apenas os valores dentro dos limites IQR ou que são nulos.
             mask &= s.between(low, high) | s.isna()
+        # Filtra o DataFrame usando a máscara atualizada e cria uma cópia.
         df = df[mask].copy()
+        # Atualiza o DataFrame no estado da sessão do Streamlit.
         st.session_state.df = df
+        # Calcula o número de linhas removidas.
         removed = before - df.shape[0]
+        # Registra a ação no log de passos.
         log_step(f"Outliers removidos por IQR em {len(cols_out)} colunas. Linhas removidas: {removed}.")
+        # Exibe uma mensagem de sucesso na interface do Streamlit.
         st.success(f"Aplicado! Linhas removidas: {removed}")
 
 # 7) Remover colunas (opcional)
+
 with st.expander("7) 🧹 Remover colunas desnecessárias - opcional", expanded=False):
+    # Cria um widget multiselect no Streamlit para o usuário selecionar quais colunas deseja remover.
+    # As opções são todos os nomes de colunas do DataFrame atual, e por padrão nenhuma é pré-selecionada.
     drop_cols = st.multiselect("Selecione colunas para remover", options=list(df.columns), default=[])
+    # Cria um botão no Streamlit para aplicar a remoção das colunas selecionadas.
+    # O botão é desabilitado se a lista `drop_cols` estiver vazia (ou seja, nenhuma coluna selecionada).
     if st.button("Remover colunas selecionadas", key="apply_dropcols", disabled=(len(drop_cols) == 0)):
+        # Remove as colunas especificadas na lista `drop_cols` do DataFrame.
+        # `errors="ignore"` evita que um erro seja levantado se uma coluna em `drop_cols` não existir no DataFrame.
         df = df.drop(columns=drop_cols, errors="ignore")
+        # Atualiza o DataFrame armazenado no estado da sessão do Streamlit com as colunas removidas.
         st.session_state.df = df
+        # Registra a ação de remoção de colunas no log de passos da aplicação.
         log_step(f"Colunas removidas: {drop_cols}")
+        # Exibe uma mensagem de sucesso na interface do Streamlit.
         st.success("Aplicado!")
 
 st.divider()
 
-# ---------------------------
+
 # Log e Download final
-# ---------------------------
+
+# Cria duas colunas na interface do Streamlit, com proporções de largura iguais (1 para 1) e um espaçamento "large"
 left, right = st.columns([1, 1], gap="large")
 
+# Inicia um bloco de código que será renderizado na primeira coluna (left)
 with left:
+    # Adiciona um subtítulo à coluna para o log de ações
     st.subheader("🧾 Log do que foi feito")
+    # Verifica se a lista de log no estado da sessão está vazia
     if len(st.session_state.log) == 0:
+        # Se estiver vazia, exibe uma mensagem informativa
         st.info("Nenhuma etapa aplicada ainda.")
+    # Se houver itens no log
     else:
+        # Itera sobre cada mensagem no log, com um contador começando de 1
         for i, msg in enumerate(st.session_state.log, start=1):
+            # Exibe cada mensagem do log formatada com seu número
             st.write(f"{i}. {msg}")
 
+# Inicia um bloco de código que será renderizado na segunda coluna (right)
 with right:
+    # Adiciona um subtítulo à coluna para a seção de exportação
     st.subheader("✅ Exportar")
+    # Cria um campo de texto para o usuário definir o nome do arquivo de saída, com um valor padrão
     nome_saida = st.text_input("Nome do arquivo de saída", value="dados_tratados.csv")
+    # Chama a função download_button_csv para criar um botão de download com o DataFrame atual e o nome/separador especificados
     download_button_csv(st.session_state.df, filename=nome_saida, sep=";")
 
-
+# Adiciona uma pequena dica/legenda na parte inferior da interface
 st.caption("Dica: se quiser voltar ao início, use **Resetar tudo** na barra lateral.")
