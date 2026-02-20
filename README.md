@@ -3,7 +3,7 @@
 Aplicação em **Python + Streamlit** para **carregar um CSV**, executar **limpeza de dados passo a passo** (com opções por etapa) e **baixar o arquivo final tratado** pronto para análise/BI/ML.
 
 GitHub: https://github.com/CostaPaiiva
-
+linkedin: https://www.linkedin.com/feed/update/urn:li:ugcPost:7430406606816899072/
 ---
 
 ## ✨ O que o sistema faz
