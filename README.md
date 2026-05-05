@@ -4,9 +4,6 @@ Aplicação em **Python + Streamlit** para **carregar um CSV**, executar **limpe
 
 GitHub: https://github.com/CostaPaiiva
 
-linkedin: https://www.linkedin.com/feed/update/urn:li:ugcPost:7430406606816899072/
----
-
 ## ✨ O que o sistema faz
 
 - Upload de arquivo **.csv**
